@@ -1,0 +1,17 @@
+.git
+.idea
+.env
+.env.local
+*.log
+**/.gradle
+**/node_modules
+**/.next
+**/src/openapi
+**/src/jooq
+api/build
+app/build
+agent/build
+buildSrc/build
+frontend/build
+frontend/node
+proxy/build

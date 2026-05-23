@@ -1,0 +1,96 @@
+[versions]
+kotlin = "2.3.20"
+ktor = "3.4.3"
+nodeGradle = "7.1.0"
+kotlinxCoroutines = "1.9.0"
+kotlinxSerialization = "1.7.3"
+logback = "1.5.13"
+postgresql = "42.7.4"
+hikari = "6.2.1"
+flyway = "12.6.1"
+jooq = "3.20.15"
+junit = "5.11.4"
+sonarlint = "7.1.0"
+openapiGenerator = "7.21.0"
+composeMultiplatform = "1.10.3"
+material3 = "1.9.0-beta03"
+byteBuddy = "1.18.8"
+shadow = "9.4.1"
+gson = "2.11.0"
+netty = "4.2.14.Final"
+asm = "9.7.1"
+
+[libraries]
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-forwarded-header = { module = "io.ktor:ktor-server-forwarded-header", version.ref = "ktor" }
+ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+jooq = { module = "org.jooq:jooq", version.ref = "jooq" }
+
+byte-buddy = { module = "net.bytebuddy:byte-buddy", version.ref = "byteBuddy" }
+byte-buddy-agent = { module = "net.bytebuddy:byte-buddy-agent", version.ref = "byteBuddy" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+
+netty-all = { module = "io.netty:netty-all", version.ref = "netty" }
+
+asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
+
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[bundles]
+ktor-server = [
+    "ktor-server-core",
+    "ktor-server-netty",
+    "ktor-server-content-negotiation",
+    "ktor-serialization-kotlinx-json",
+    "ktor-server-auth",
+    "ktor-server-auth-jwt",
+    "ktor-server-status-pages",
+    "ktor-server-call-logging",
+    "ktor-server-cors",
+    "ktor-server-forwarded-header",
+    "ktor-server-config-yaml",
+]
+ktor-client = [
+    "ktor-client-core",
+    "ktor-client-cio",
+    "ktor-client-content-negotiation",
+    "ktor-serialization-kotlinx-json",
+]
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+node-gradle = { id = "com.github.node-gradle.node", version.ref = "nodeGradle" }
+sonarlint = { id = "name.remal.sonarlint", version.ref = "sonarlint" }
+openapi-generator = { id = "org.openapi.generator", version.ref = "openapiGenerator" }
+flyway = { id = "org.flywaydb.flyway", version.ref = "flyway" }
+jooq-codegen = { id = "org.jooq.jooq-codegen-gradle", version.ref = "jooq" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }

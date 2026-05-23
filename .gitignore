@@ -1,0 +1,35 @@
+.*/
+
+# Gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+# buildSrc has a `bytedex.build` package; it is source, not a Gradle output dir.
+!buildSrc/src/main/kotlin/**/build/
+!buildSrc/src/main/kotlin/**/build/**
+
+# Generated source sets (regenerated from openapi.yaml / Flyway migrations)
+**/src/openapi/
+**/src/jooq/
+
+# Kotlin / JVM
+*.class
+*.log
+
+# Node / Next.js (frontend module)
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local env
+.env
+.env.local

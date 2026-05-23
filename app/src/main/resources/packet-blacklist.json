@@ -1,0 +1,8 @@
+[
+  { "packetId": 17, "protocol": "LOGIN", "direction": "C2S" },
+  { "packetId": 38, "protocol": "LOGIN", "direction": "C2S" },
+  { "packetId": 1, "protocol": "GAME", "direction": "C2S" },
+  { "packetId": 1, "protocol": "GAME", "direction": "S2C" },
+  { "packetId": 1, "protocol": "CHAT", "direction": "C2S" },
+  { "packetId": 1, "protocol": "CHAT", "direction": "S2C" }
+]

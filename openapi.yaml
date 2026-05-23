@@ -1,0 +1,1176 @@
+openapi: 3.1.0
+info:
+  title: ByteDex API
+  version: 0.1.0
+  description: REST API for a community-driven pokemmo packet archive.
+
+servers:
+  - url: https://bytedex.fiereu.de/api/v1
+    description: Production
+  - url: http://localhost:8080/api/v1
+    description: Local dev
+
+tags:
+  - name: auth
+    description: GitHub sign-in and token management
+  - name: sessions
+    description: Recording session lifecycle
+  - name: packets
+    description: Submit, browse, and retrieve packets
+  - name: search
+    description: Search and filter
+  - name: schemas
+    description: Inferred packet structures and annotations
+  - name: users
+    description: User profile
+  - name: system
+    description: Health and version
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [system]
+      summary: Liveness/readiness probe
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /auth/github/login:
+    get:
+      operationId: startGithubLogin
+      tags: [auth]
+      summary: Start the GitHub OAuth flow
+      security: []
+      parameters:
+        - name: redirect_uri
+          in: query
+          required: true
+          description: Where the client lands after sign-in. Must be an allow-listed URI.
+          schema:
+            type: string
+            format: uri
+      responses:
+        '302':
+          description: Redirect to GitHub
+        '400':
+          description: redirect_uri missing or not allow-listed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /auth/github/callback:
+    get:
+      operationId: githubCallback
+      tags: [auth]
+      summary: GitHub OAuth callback
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the client's redirect_uri with a single-use code.
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Exchange a refresh token for a new token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/exchange:
+    post:
+      operationId: exchangeAuthCode
+      tags: [auth]
+      summary: Exchange a single-use OAuth code for a token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Revoke the current refresh token
+      responses:
+        '204':
+          description: Logged out
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List sessions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: submittedBy
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: gameVersion
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/SessionStatus'
+      responses:
+        '200':
+          description: Paginated list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionPage'
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Open a new recording session
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+
+  /sessions/{sessionId}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get session details
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateSession
+      tags: [sessions]
+      summary: Update session metadata
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+    delete:
+      operationId: deleteSession
+      tags: [sessions]
+      summary: Delete a session and all its packets
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /sessions/{sessionId}/close:
+    post:
+      operationId: closeSession
+      tags: [sessions]
+      summary: Close a session, making it immutable
+      description: A session that received zero packets is deleted instead, returning 204.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '204':
+          description: Session was empty and has been deleted
+
+  /sessions/{sessionId}/packets:
+    get:
+      operationId: listSessionPackets
+      tags: [packets]
+      summary: List packets in a session
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: protocol
+          in: query
+          schema:
+            $ref: '#/components/schemas/Protocol'
+        - name: direction
+          in: query
+          schema:
+            $ref: '#/components/schemas/Direction'
+        - name: packetId
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 255
+        - name: capturedBefore
+          in: query
+          description: Only return packets with `capturedAt` strictly earlier than this timestamp (ISO-8601).
+          schema:
+            type: string
+            format: date-time
+        - name: capturedAfter
+          in: query
+          description: Only return packets with `capturedAt` strictly later than this timestamp (ISO-8601).
+          schema:
+            type: string
+            format: date-time
+        - name: sort
+          in: query
+          description: Capture-time sort order, oldest-first by default.
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Packet summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketPage'
+    post:
+      operationId: submitPackets
+      tags: [packets]
+      summary: Submit one or more packets to a session
+      description: Accepts one packet or a batch of up to 10,000. The session must be open.
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: Content-Encoding
+          in: header
+          schema:
+            type: string
+            enum: [gzip, identity]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/PacketSubmission'
+                - $ref: '#/components/schemas/PacketBatch'
+      responses:
+        '201':
+          description: Single packet accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Packet'
+        '202':
+          description: Batch accepted in full
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketBatchAck'
+        '207':
+          description: Mixed result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketBatchPartial'
+        '409':
+          description: Session is closed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /packets:
+    get:
+      operationId: listPackets
+      tags: [packets]
+      summary: List and filter packets across all sessions
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: gameVersion
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: protocol
+          in: query
+          schema:
+            $ref: '#/components/schemas/Protocol'
+        - name: direction
+          in: query
+          schema:
+            $ref: '#/components/schemas/Direction'
+        - name: packetId
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 255
+        - name: submittedBy
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketPage'
+
+  /packets/{packetUuid}:
+    get:
+      operationId: getPacket
+      tags: [packets]
+      summary: Get a single packet including its payload
+      parameters:
+        - $ref: '#/components/parameters/PacketUuid'
+      responses:
+        '200':
+          description: Packet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Packet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deletePacket
+      tags: [packets]
+      summary: Delete a packet
+      parameters:
+        - $ref: '#/components/parameters/PacketUuid'
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /packets/{packetUuid}/payload:
+    get:
+      operationId: getPacketPayload
+      tags: [packets]
+      summary: Download the raw payload bytes
+      parameters:
+        - $ref: '#/components/parameters/PacketUuid'
+      responses:
+        '200':
+          description: Raw payload
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /search:
+    post:
+      operationId: searchPackets
+      tags: [search]
+      summary: Structured search across the archive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchQuery'
+      responses:
+        '200':
+          description: Matching packets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketPage'
+
+  /game-versions:
+    get:
+      operationId: listGameVersions
+      tags: [search]
+      summary: Distinct game versions seen across all sessions, newest first
+      responses:
+        '200':
+          description: Versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameVersionsResponse'
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [search]
+      summary: Aggregate statistics
+      parameters:
+        - name: gameVersion
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArchiveStats'
+
+  /stats/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [search]
+      summary: Top contributors by packets submitted
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Ranked contributors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leaderboard'
+
+  /stats/ingest:
+    get:
+      operationId: getIngestSeries
+      tags: [search]
+      summary: Daily ingest counts by direction
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Time series
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestSeries'
+
+  /schemas/{gameVersion}/{protocol}/{direction}/{packetId}:
+    get:
+      operationId: getSchema
+      tags: [schemas]
+      summary: Get the inferred structure for a packet type
+      parameters:
+        - name: gameVersion
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: protocol
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Protocol'
+        - name: direction
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Direction'
+        - name: packetId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 255
+      responses:
+        '200':
+          description: Inferred schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacketSchema'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /schemas/{gameVersion}/{protocol}/{direction}/{packetId}/annotations:
+    post:
+      operationId: annotateSchema
+      tags: [schemas]
+      summary: Contribute a manual field annotation
+      parameters:
+        - name: gameVersion
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: protocol
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Protocol'
+        - name: direction
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Direction'
+        - name: packetId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FieldAnnotation'
+      responses:
+        '201':
+          description: Annotation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldAnnotation'
+
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [users]
+      summary: Current user
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    delete:
+      operationId: deleteCurrentUser
+      tags: [users]
+      summary: Delete the current account
+      description: The user's submissions are reassigned to the anonymous account, not deleted.
+      responses:
+        '204':
+          description: Account deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{userId}:
+    get:
+      operationId: getPublicUser
+      tags: [users]
+      summary: Public profile of a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicUser'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PacketUuid:
+      name: packetUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Authenticated but not permitted
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: Too many requests
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: Request body exceeds size limit
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    Pagination:
+      type: object
+      required: [page, pageSize, total]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version: { type: string }
+
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType:
+          type: string
+          enum: [Bearer]
+        expiresIn: { type: integer }
+
+    Protocol:
+      type: string
+      enum: [LOGIN, GAME, CHAT]
+
+    Direction:
+      type: string
+      enum: [C2S, S2C]
+
+    SessionStatus:
+      type: string
+      enum: [open, closed]
+
+    SessionCreate:
+      type: object
+      required: [gameVersion]
+      properties:
+        gameVersion:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 4294967295
+        description: { type: string, maxLength: 2000 }
+        tags:
+          type: array
+          maxItems: 32
+          items: { type: string, maxLength: 50 }
+        clientInfo: { type: string, maxLength: 200 }
+
+    SessionUpdate:
+      type: object
+      properties:
+        description: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+
+    SessionFields:
+      type: object
+      required: [id, submittedBy, status, packetCount, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        submittedBy: { type: string, format: uuid }
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        packetCount: { type: integer }
+        firstPacketAt: { type: string, format: date-time }
+        lastPacketAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time }
+
+    Session:
+      allOf:
+        - $ref: '#/components/schemas/SessionCreate'
+        - $ref: '#/components/schemas/SessionFields'
+
+    SessionPage:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    PacketSubmission:
+      type: object
+      required: [protocol, direction, packetId, payload, capturedAt]
+      properties:
+        clientSeq:
+          type: integer
+          format: int64
+        capturedAt:
+          type: string
+          format: date-time
+        protocol:
+          $ref: '#/components/schemas/Protocol'
+        direction:
+          $ref: '#/components/schemas/Direction'
+        packetId:
+          type: integer
+          minimum: 0
+          maximum: 255
+        payload:
+          type: string
+          contentEncoding: base64
+          maxLength: 1398102
+          description: Decrypted and decompressed bytes, base64-encoded. Max 1 MB.
+        notes:
+          type: string
+          maxLength: 2000
+
+    PacketBatch:
+      type: object
+      required: [packets]
+      properties:
+        packets:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items:
+            $ref: '#/components/schemas/PacketSubmission'
+
+    PacketFields:
+      type: object
+      required: [id, sessionId, gameVersion, submittedBy, submittedAt, payloadSize]
+      properties:
+        id: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        gameVersion:
+          type: integer
+          format: int64
+        submittedBy: { type: string, format: uuid }
+        submittedAt: { type: string, format: date-time }
+        payloadSize: { type: integer }
+
+    Packet:
+      allOf:
+        - $ref: '#/components/schemas/PacketSubmission'
+        - $ref: '#/components/schemas/PacketFields'
+
+    PacketSummary:
+      type: object
+      required: [id, sessionId, gameVersion, protocol, direction, packetId, payloadSize, capturedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        gameVersion:
+          type: integer
+          format: int64
+        protocol:
+          $ref: '#/components/schemas/Protocol'
+        direction:
+          $ref: '#/components/schemas/Direction'
+        packetId: { type: integer }
+        payloadSize: { type: integer }
+        capturedAt: { type: string, format: date-time }
+        submittedBy: { type: string, format: uuid }
+
+    PacketBatchAck:
+      type: object
+      required: [accepted, ids]
+      properties:
+        accepted: { type: integer }
+        ids:
+          type: array
+          items: { type: string, format: uuid }
+
+    PacketBatchPartial:
+      type: object
+      required: [accepted, rejected, results]
+      properties:
+        accepted: { type: integer }
+        rejected: { type: integer }
+        results:
+          type: array
+          items:
+            type: object
+            required: [index, ok]
+            properties:
+              index: { type: integer }
+              ok: { type: boolean }
+              id: { type: string, format: uuid }
+              error: { type: string }
+
+    PacketPage:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PacketSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    SearchQuery:
+      type: object
+      properties:
+        gameVersions:
+          type: array
+          items:
+            type: integer
+            format: int64
+        protocols:
+          type: array
+          items:
+            $ref: '#/components/schemas/Protocol'
+        directions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Direction'
+        packetIds:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 255
+        sessionIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        minPayloadSize: { type: integer }
+        maxPayloadSize: { type: integer }
+        capturedAfter: { type: string, format: date-time }
+        capturedBefore: { type: string, format: date-time }
+        payloadHex:
+          type: string
+          maxLength: 512
+          description: Hex byte pattern to find in the decoded payload. Whitespace and colons are ignored.
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+
+    GameVersionsResponse:
+      type: object
+      required: [versions]
+      properties:
+        versions:
+          type: array
+          description: Distinct game versions present in sessions, sorted descending.
+          items:
+            type: integer
+            format: int64
+
+    ArchiveStats:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+          format: int64
+        totalPackets:
+          type: integer
+          format: int64
+        totalContributors:
+          type: integer
+          description: Distinct users who have submitted at least one session.
+        activeContributors:
+          type: integer
+          description: Distinct submitters with a session created in the last 7 days.
+        totalSchemas:
+          type: integer
+          description: Number of inferred packet schemas.
+        byProtocol:
+          type: object
+          additionalProperties: { type: integer }
+        byDirection:
+          type: object
+          additionalProperties: { type: integer }
+        byGameVersion:
+          type: array
+          items:
+            type: object
+            properties:
+              gameVersion:
+                type: integer
+                format: int64
+              count: { type: integer }
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, userId, githubLogin, packetCount, sessionCount]
+      properties:
+        rank: { type: integer }
+        userId: { type: string, format: uuid }
+        githubLogin: { type: string }
+        avatarUrl: { type: string }
+        packetCount: { type: integer, format: int64 }
+        sessionCount: { type: integer }
+
+    Leaderboard:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+
+    IngestBucket:
+      type: object
+      required: [day, c2s, s2c]
+      properties:
+        day: { type: string, format: date-time }
+        c2s: { type: integer, format: int64 }
+        s2c: { type: integer, format: int64 }
+
+    IngestSeries:
+      type: object
+      required: [days, buckets]
+      properties:
+        days: { type: integer }
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngestBucket'
+
+    InferredFieldType:
+      type: string
+      enum: [uint8, uint16, uint32, uint64, int8, int16, int32, int64, float, double, string, bytes, array, struct, unknown]
+
+    InferredField:
+      type: object
+      required: [offset, length, type, confidence]
+      properties:
+        offset: { type: integer }
+        length: { type: integer }
+        type:
+          $ref: '#/components/schemas/InferredFieldType'
+        name: { type: string }
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        notes: { type: string }
+        isSessionConstant:
+          type: boolean
+          description: Constant within a session but varies across sessions
+        isGlobalConstant:
+          type: boolean
+          description: Constant across all observed sessions
+
+    PacketSchema:
+      type: object
+      required: [gameVersion, protocol, direction, packetId, sampleCount, fields, generatedAt]
+      properties:
+        gameVersion:
+          type: integer
+          format: int64
+        protocol:
+          $ref: '#/components/schemas/Protocol'
+        direction:
+          $ref: '#/components/schemas/Direction'
+        packetId: { type: integer }
+        sampleCount: { type: integer }
+        sessionCount: { type: integer }
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/InferredField'
+        generatedAt: { type: string, format: date-time }
+
+    FieldAnnotation:
+      type: object
+      required: [offset, length, type]
+      properties:
+        offset: { type: integer }
+        length: { type: integer }
+        type:
+          $ref: '#/components/schemas/InferredFieldType'
+        name: { type: string }
+        notes: { type: string }
+
+    User:
+      type: object
+      required: [id, githubLogin, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        githubLogin: { type: string }
+        githubId:
+          type: integer
+          format: int64
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        createdAt: { type: string, format: date-time }
+
+    PublicUser:
+      type: object
+      required: [id, githubLogin, createdAt, submissionCount]
+      properties:
+        id: { type: string, format: uuid }
+        githubLogin: { type: string }
+        displayName: { type: string }
+        avatarUrl: { type: string, format: uri }
+        createdAt: { type: string, format: date-time }
+        submissionCount: { type: integer }
+        sessionCount: { type: integer }

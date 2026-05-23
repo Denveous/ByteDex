@@ -1,0 +1,131 @@
+.bd-screen {
+    width: 100%;
+    height: 100%;
+    background: var(--bg-page);
+    color: var(--fg-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    font-feature-settings: "ss01", "cv11";
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bd-topbar {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+    flex-shrink: 0;
+}
+
+.bd-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--fg-primary);
+}
+
+.bd-logo-mark {
+    width: 22px;
+    height: 22px;
+    background: var(--fg-primary);
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-inverse);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bd-sidebar {
+    width: 224px;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-sizing: border-box;
+}
+
+.bd-navitem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--fg-secondary);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: default;
+    text-decoration: none;
+}
+
+.bd-navitem:hover {
+    background: var(--bg-subtle);
+    color: var(--fg-primary);
+}
+
+.bd-navitem.active {
+    background: var(--bg-subtle);
+    color: var(--fg-primary);
+}
+
+.bd-navitem .bd-navicon {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg-tertiary);
+}
+
+.bd-navitem.active .bd-navicon {
+    color: var(--accent);
+}
+
+.bd-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-page);
+    overflow: hidden;
+}
+
+.bd-pagehead {
+    padding: 18px 24px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+}
+
+.bd-crumb {
+    font-size: 13px;
+    color: var(--fg-tertiary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.bd-crumb .bd-crumb-sep {
+    color: var(--fg-muted);
+}
+
+.bd-crumb .bd-crumb-active {
+    color: var(--fg-primary);
+    font-weight: 500;
+}

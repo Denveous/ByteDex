@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+
+@import "../styles/tokens.css";
+@import "../styles/type.css";
+@import "../styles/shell.css";
+@import "../styles/card.css";
+@import "../styles/buttons.css";
+@import "../styles/inputs.css";
+@import "../styles/chips.css";
+@import "../styles/table.css";
+@import "../styles/avatars.css";
+@import "../styles/direction.css";
+@import "../styles/misc.css";

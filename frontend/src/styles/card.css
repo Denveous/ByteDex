@@ -1,0 +1,11 @@
+.bd-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+}
+
+.bd-card-hover:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+}

@@ -1,0 +1,70 @@
+.bd-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+    color: var(--fg-secondary);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.bd-chip.solid {
+    background: var(--fg-primary);
+    color: var(--fg-inverse);
+    border-color: transparent;
+}
+
+.bd-chip.outline {
+    background: var(--bg-surface);
+}
+
+.bd-chip.active {
+    background: var(--accent-soft);
+    border-color: #c7d2fe;
+    color: var(--accent-ink);
+}
+
+.bd-chip.c2s {
+    background: var(--c2s-soft);
+    color: var(--c2s-ink);
+    border-color: #fed7aa;
+}
+
+.bd-chip.s2c {
+    background: var(--s2c-soft);
+    color: var(--s2c-ink);
+    border-color: #a5f3fc;
+}
+
+.bd-chip.dot::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+}
+
+.bd-chip.sq {
+    border-radius: var(--radius-xs);
+    height: 22px;
+}
+
+.bd-chip.sm {
+    height: 20px;
+    padding: 0 7px;
+    font-size: 11px;
+}
+
+.bd-chip.removable::after {
+    content: "×";
+    margin-left: 2px;
+    color: var(--fg-tertiary);
+    font-size: 14px;
+    line-height: 1;
+}
