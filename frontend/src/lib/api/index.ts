@@ -3,4 +3,5 @@ export * from "./sessions";
 export * from "./search";
 export * from "./profile";
 export * from "./dashboard";
+export * from "./schema";
 export * from "./inspect";

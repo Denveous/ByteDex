@@ -21,6 +21,7 @@ export const Sidebar = async ({
     { id: "Dashboard", icon: "chart", href: "/dashboard" },
     { id: "Sessions", icon: "layers", href: "/sessions" },
     { id: "Packets", icon: "inbox", href: "/packets" },
+    { id: "Schemas", icon: "code", href: "/schemas" },
   ];
   const accountItems: NavItem[] = [
     { id: "Profile", icon: "user", href: "/profile" },

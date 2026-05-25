@@ -1,16 +1,20 @@
 package org.openmmo.bytedex.proxy
 
+import org.openmmo.bytedex.proxy.netty.FilePacketSink
 import org.openmmo.bytedex.proxy.netty.PacketPatcher
 import org.openmmo.bytedex.proxy.netty.PacketSink
 import org.openmmo.bytedex.proxy.netty.ProxyServer
 import org.openmmo.bytedex.proxy.netty.patchers.GamePatcher
 import org.openmmo.bytedex.proxy.netty.patchers.LoginPatcher
+import java.nio.file.Path
+
 
 private const val LOOPBACK = "127.0.0.1"
 
 class Proxy(
     private val sink: PacketSink = PacketSink.NONE,
 ) {
+    constructor(logPath: String) : this(FilePacketSink(Path.of(logPath)))
 
     private val servers = mutableListOf<ProxyServer>()
 
@@ -47,7 +51,7 @@ class Proxy(
             name = "login",
             listenHost = LOOPBACK,
             listenPort = 2106,
-            initialUpstreamHost = "loginserver.pokemmo.com",
+            initialUpstreamHost = "185.180.13.135",
             initialUpstreamPort = 2106,
             signingPrivateKey = ProxyKeys.ls.privateKey,
             signingPublicKey = ProxyKeys.ls.publicKey,
@@ -72,8 +76,10 @@ class Proxy(
 }
 
 fun main() {
-    val proxy = Proxy()
-    Runtime.getRuntime().addShutdownHook(Thread { proxy.stop() })
+    val ts = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+    val sink = FilePacketSink(Path.of("C:/Users/Tim/Desktop/PokeMMO/Research/logs/packets_$ts.log"))
+    val proxy = Proxy(sink)
+    Runtime.getRuntime().addShutdownHook(Thread { sink.close(); proxy.stop() })
     proxy.start()
     Thread.currentThread().join()
 }

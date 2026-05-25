@@ -11,10 +11,10 @@ fun interface PacketSink {
         packetId: Int,
         payload: ByteArray,
         capturedAtEpochMillis: Long,
+        name: String?,
     )
 
     companion object {
-        val NONE: PacketSink = PacketSink { _, _, _, _, _ -> }
+        val NONE: PacketSink = PacketSink { _, _, _, _, _, _ -> }
     }
 }
-

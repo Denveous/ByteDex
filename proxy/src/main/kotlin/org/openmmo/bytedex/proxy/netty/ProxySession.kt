@@ -12,6 +12,7 @@ import java.util.ArrayDeque
 import java.util.zip.Inflater
 
 class ProxySession(
+    val npcSpawnRegistry: MutableMap<Long, Map<String, String>> = java.util.concurrent.ConcurrentHashMap(),
     val portName: String,
     val signingPrivateKey: ECPrivateKey,
     val signingPublicKey: ECPublicKey,
